@@ -1,10 +1,10 @@
 from sanic import Request, json
 
-from blueprints import auth
+from blueprints import bp_auth
 from blueprints.auth.decorator import authorized
 
 
-@auth.get("/login")
+@bp_auth.get("/login")
 @authorized()
 async def login(request: Request):
     return json({"user_id": request.ctx.user_id})
