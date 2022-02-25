@@ -5,6 +5,10 @@ name = "pypi"
 
 [packages]
 sanic = "*"
+sanic_ext = "*"
+requests = "*"
+tortoise-orm = "*"
+aiomysql = "*"
 
 [dev-packages]
 
