@@ -3,6 +3,7 @@ from functools import wraps
 import requests
 from sanic import Request
 from sanic.exceptions import Unauthorized
+from sanic_ext.extensions.openapi import openapi
 
 import config
 
@@ -27,6 +28,7 @@ def authorized():
                 return await f(request, *args, **kwargs)
             raise Unauthorized("Authorization Information Needed.")
 
+        openapi.parameter("Authorization", str, "header")(decorated_function)
         return decorated_function
 
     return decorator

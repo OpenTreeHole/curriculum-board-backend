@@ -20,7 +20,6 @@ CoursePyd = pmc(Course, exclude=("review_list.reviewer_id",))
 
 
 @bp_curriculum_board.post("/courses")
-@openapi.parameter("Authorization", str, "header")
 @openapi.body(
     RequestBody({"application/json": NewCoursePyd.construct()}))
 @authorized()
