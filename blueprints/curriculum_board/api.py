@@ -21,7 +21,15 @@ CoursePyd = pmc(Course, exclude=("review_list.reviewer_id",))
 
 @bp_curriculum_board.post("/courses")
 @openapi.body(
-    RequestBody({"application/json": NewCoursePyd.construct()}))
+    RequestBody({"application/json": NewCoursePyd.construct()})
+)
+@openapi.description("Add a new course.")
+@openapi.response(
+    200,
+    {
+        "application/json": CoursePyd.construct(review_list=[GetReviewPyd.construct()]),
+    }
+)
 @authorized()
 @validate(json=NewCoursePyd)
 async def add_course(request: Request, body: NewCoursePyd):
@@ -30,6 +38,13 @@ async def add_course(request: Request, body: NewCoursePyd):
 
 
 @bp_curriculum_board.get("/courses/<course_id:int>")
+@openapi.description("Get a course object with given course id.")
+@openapi.response(
+    200,
+    {
+        "application/json": CoursePyd.construct(review_list=[GetReviewPyd.construct()]),
+    }
+)
 @authorized()
 async def get_course(request: Request, course_id: int):
     course: Optional[Course] = await Course.get_or_none(id=course_id)
@@ -40,7 +55,22 @@ async def get_course(request: Request, course_id: int):
 
 @bp_curriculum_board.post("/courses/<course_id:int>/reviews")
 @openapi.body(
-    RequestBody({"application/json": NewReviewPyd.construct(title="title", content="content", rank="C+", remark=10)}))
+    RequestBody({
+        "application/json": NewReviewPyd.construct(
+            title="review title",
+            content="review content",
+            rank="B+",
+            remark=9
+        )
+    })
+)
+@openapi.description("Add a new review on course with given course id.")
+@openapi.response(
+    200,
+    {
+        "application/json": GetReviewPyd.construct()
+    }
+)
 @authorized()
 @validate(json=NewReviewPyd)
 async def add_review(request: Request, body: NewReviewPyd, course_id: int):
@@ -54,6 +84,13 @@ async def add_review(request: Request, body: NewReviewPyd, course_id: int):
 
 
 @bp_curriculum_board.get("/courses/<course_id:int>/reviews")
+@openapi.description("Get all reviews on course with given course id.")
+@openapi.response(
+    200,
+    {
+        "application/json": [GetReviewPyd.construct()]
+    }
+)
 @authorized()
 async def get_reviews(_: Request, course_id: int):
     this_course: Optional[Course] = await Course.get_or_none(id=course_id)
