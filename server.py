@@ -1,6 +1,5 @@
 from sanic import Sanic
 from sanic_ext import Extend
-from tortoise import Tortoise
 from tortoise.contrib.sanic import register_tortoise
 
 from blueprints import bp_curriculum_board, bp_auth

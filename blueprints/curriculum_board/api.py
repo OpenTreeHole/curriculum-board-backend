@@ -1,24 +1,21 @@
-from typing import Optional, List
+from typing import Optional
 
-from sanic import Request, response, json
+from sanic import Request
 from sanic.exceptions import NotFound
 from sanic_ext import validate
 from sanic_ext.extensions.openapi import openapi
 from sanic_ext.extensions.openapi.definitions import RequestBody
-from tortoise import Tortoise
-from tortoise.contrib.pydantic import pydantic_model_creator
+
 from blueprints import bp_curriculum_board
 from blueprints.auth.decorator import authorized
 from models import Review, Course
+from utils.sanic_helper import jsonify_response, jsonify_list_response
+from utils.tortoise_fix import pmc
 
-Tortoise.init_models(["blueprints.curriculum_board.api"], "models")
-
-NewReviewPyd = pydantic_model_creator(Review, exclude=("id", "reviewer_id", "time_created", "courses"))
-ReviewPyd = pydantic_model_creator(Review, exclude=("courses",))
-
-CoursePyd = pydantic_model_creator(Course)
-NewCoursePyd = pydantic_model_creator(Course, exclude=("id", "review_list"))
-
+NewReviewPyd = pmc(Review, exclude=("id", "reviewer_id", "time_created", "courses"))
+ReviewPyd = pmc(Review, exclude=("courses",))
+NewCoursePyd = pmc(Course, exclude=("id", "review_list"))
+CoursePyd = pmc(Course)
 
 
 @bp_curriculum_board.post("/courses")
@@ -29,7 +26,7 @@ NewCoursePyd = pydantic_model_creator(Course, exclude=("id", "review_list"))
 async def add_course(request: Request, body: NewCoursePyd):
     course_added = await Course.create(**body.dict())
     print(str(CoursePyd.schema()))
-    return json((await CoursePyd.from_tortoise_orm(course_added)).dict())
+    return await jsonify_response(CoursePyd, course_added)
 
 
 @bp_curriculum_board.post("/courses/<course_id:int>/reviews")
@@ -44,7 +41,7 @@ async def add_review(request: Request, body: NewReviewPyd, course_id: int):
 
     review_added: Review = await Review.create(**body.dict(), reviewer_id=request.ctx.user_id)
     await this_course.review_list.add(review_added)
-    return json((await ReviewPyd.from_tortoise_orm(review_added)).dict())
+    return await jsonify_response(ReviewPyd, review_added)
 
 
 @bp_curriculum_board.get("/courses/<course_id:int>/reviews")
@@ -55,4 +52,4 @@ async def get_reviews(_: Request, course_id: int):
         raise NotFound(f"Course with id {course_id} is not found")
 
     reviews: list[Review] = await this_course.review_list.all()
-    return json([(await ReviewPyd.from_tortoise_orm(r)).dict() for r in reviews])
+    return await jsonify_list_response(ReviewPyd, reviews)

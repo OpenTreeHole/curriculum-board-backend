@@ -17,7 +17,7 @@ class Review(Model):
     title = fields.TextField()
     content = fields.TextField()
     reviewer_id = fields.IntField()
-    time_created: DatetimeField = fields.DatetimeField(auto_now_add=True)
+    time_created = fields.DatetimeField(auto_now_add=True)
     rank = fields.TextField()
     remark = fields.IntField()
     courses: fields.ManyToManyRelation[Course]
