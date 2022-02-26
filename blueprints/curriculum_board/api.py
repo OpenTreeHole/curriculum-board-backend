@@ -5,12 +5,15 @@ from sanic.exceptions import NotFound
 from sanic_ext import validate
 from sanic_ext.extensions.openapi import openapi
 from sanic_ext.extensions.openapi.definitions import RequestBody
+from tortoise import Tortoise
 
 from blueprints import bp_curriculum_board
 from blueprints.auth.decorator import authorized
 from models import Review, Course
 from utils.sanic_helper import jsonify_response, jsonify_list_response
 from utils.tortoise_fix import pmc
+
+Tortoise.init_models(["blueprints.curriculum_board.api"], "models")
 
 NewReviewPyd = pmc(Review, exclude=("id", "reviewer_id", "time_created", "courses"))
 ReviewPyd = pmc(Review, exclude=("courses",))
@@ -31,11 +34,12 @@ async def add_course(request: Request, body: NewCoursePyd):
 
 @bp_curriculum_board.get("/courses/<course_id:int>")
 @authorized()
-async def get_course(request: Request,course_id: int):
+async def get_course(request: Request, course_id: int):
     course: Optional[Course] = await Course.get_or_none(id=course_id)
     if course is None:
         raise NotFound(f"Course with id {course_id} is not found")
-    return json((await CoursePyd.from_tortoise_orm(course_added)).dict())
+    return await jsonify_response(CoursePyd, course)
+
 
 @bp_curriculum_board.post("/courses/<course_id:int>/reviews")
 @openapi.body(
