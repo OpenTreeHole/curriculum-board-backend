@@ -5,7 +5,6 @@ from sanic.exceptions import NotFound
 from sanic_ext import validate
 from sanic_ext.extensions.openapi import openapi
 from sanic_ext.extensions.openapi.definitions import RequestBody
-from tortoise import Tortoise
 
 from blueprints import bp_curriculum_board
 from blueprints.auth.decorator import authorized
@@ -13,22 +12,21 @@ from models import Review, Course
 from utils.sanic_helper import jsonify_response, jsonify_list_response
 from utils.tortoise_fix import pmc
 
-Tortoise.init_models(["blueprints.curriculum_board.api"], "models")
-
 NewReviewPyd = pmc(Review, exclude=("id", "reviewer_id", "time_created", "courses"))
+GetReviewPyd = pmc(Review, exclude=("courses", "reviewer_id"))
 ReviewPyd = pmc(Review, exclude=("courses",))
 NewCoursePyd = pmc(Course, exclude=("id", "review_list"))
-CoursePyd = pmc(Course)
+CoursePyd = pmc(Course, exclude=("review_list.reviewer_id",))
 
 
 @bp_curriculum_board.post("/courses")
+@openapi.parameter("Authorization", str, "header")
 @openapi.body(
     RequestBody({"application/json": NewCoursePyd.construct()}))
 @authorized()
 @validate(json=NewCoursePyd)
 async def add_course(request: Request, body: NewCoursePyd):
     course_added = await Course.create(**body.dict())
-    print(str(CoursePyd.schema()))
     return await jsonify_response(CoursePyd, course_added)
 
 
@@ -53,7 +51,7 @@ async def add_review(request: Request, body: NewReviewPyd, course_id: int):
 
     review_added: Review = await Review.create(**body.dict(), reviewer_id=request.ctx.user_id)
     await this_course.review_list.add(review_added)
-    return await jsonify_response(ReviewPyd, review_added)
+    return await jsonify_response(GetReviewPyd, review_added)
 
 
 @bp_curriculum_board.get("/courses/<course_id:int>/reviews")
@@ -64,4 +62,4 @@ async def get_reviews(_: Request, course_id: int):
         raise NotFound(f"Course with id {course_id} is not found")
 
     reviews: list[Review] = await this_course.review_list.all()
-    return await jsonify_list_response(ReviewPyd, reviews)
+    return await jsonify_list_response(GetReviewPyd, reviews)

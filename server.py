@@ -1,3 +1,5 @@
+import multiprocessing
+
 from sanic import Sanic
 from sanic_ext import Extend
 from tortoise import Tortoise, run_async
@@ -16,9 +18,14 @@ def main():
     Tortoise.init_models(model_modules, "models")
     from blueprints import bp_curriculum_board, bp_auth
     app.config.FALLBACK_ERROR_FORMAT = "json"
+    app.config.OAS_UI_DEFAULT = "swagger"
     app.blueprint(bp_curriculum_board)
     app.blueprint(bp_auth)
-    app.run(host="0.0.0.0", port=8000)
+    app.run(
+        host="0.0.0.0",
+        workers=multiprocessing.cpu_count(),
+        port=8000
+    )
 
 
 if __name__ == "__main__":
