@@ -14,7 +14,7 @@ from models import Review, Course
 Tortoise.init_models(["blueprints.curriculum_board.api"], "models")
 
 NewReviewPyd = pydantic_model_creator(Review, exclude=("id", "reviewer_id", "time_created", "courses"))
-ReviewPyd = pydantic_model_creator(Review, exclude=("courses",))
+ReviewPyd = pydantic_model_creator(Review, include=("id", "reviewer_id", "time_created"))
 
 CoursePyd = pydantic_model_creator(Course)
 NewCoursePyd = pydantic_model_creator(Course, exclude=("id", "review_list"))
@@ -31,6 +31,14 @@ async def add_course(request: Request, body: NewCoursePyd):
     print(str(CoursePyd.schema()))
     return json((await CoursePyd.from_tortoise_orm(course_added)).dict())
 
+
+@bp_curriculum_board.get("/courses/<course_id:int>")
+@authorized()
+async def get_course(request: Request,course_id: int):
+    course: Optional[Course] = await Course.get_or_none(id=course_id)
+    if course is None:
+        raise NotFound(f"Course with id {course_id} is not found")
+    return json((await CoursePyd.from_tortoise_orm(course_added)).dict())
 
 @bp_curriculum_board.post("/courses/<course_id:int>/reviews")
 @openapi.body(
