@@ -9,7 +9,7 @@ from tortoise.contrib.pydantic import pydantic_model_creator, PydanticModel
 def pmc(
         cls: "Type[Model]",
         *,
-        name=None,
+        name: object = None,
         exclude: Tuple[str, ...] = (),
         include: Tuple[str, ...] = (),
         computed: Tuple[str, ...] = (),

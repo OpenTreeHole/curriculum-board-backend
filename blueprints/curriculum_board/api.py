@@ -5,6 +5,7 @@ from sanic.exceptions import NotFound
 from sanic_ext import validate
 from sanic_ext.extensions.openapi import openapi
 from sanic_ext.extensions.openapi.definitions import RequestBody
+from tortoise import Tortoise
 
 from blueprints import bp_curriculum_board
 from blueprints.auth.decorator import authorized
