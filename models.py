@@ -1,4 +1,5 @@
 from tortoise import fields
+from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.fields import TextField, IntField, FloatField, ManyToManyRelation, DatetimeField
 from tortoise.models import Model
 
@@ -19,5 +20,4 @@ class Review(Model):
     time_created: DatetimeField = fields.DatetimeField(auto_now_add=True)
     rank: TextField = fields.TextField()
     remark: IntField = fields.IntField()
-
     courses: fields.ManyToManyRelation[Course]

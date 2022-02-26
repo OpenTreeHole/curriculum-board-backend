@@ -14,6 +14,7 @@ async def init_orm(_, __):
         db_url='sqlite://test.sqlite3',
         modules={'models': ['models']}
     )
+    await Tortoise.generate_schemas()
 
 
 @app.listener("after_server_stop")

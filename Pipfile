@@ -9,6 +9,7 @@ sanic_ext = "*"
 requests = "*"
 tortoise-orm = "*"
 aiomysql = "*"
+pydantic = "*"
 
 [dev-packages]
 
