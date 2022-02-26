@@ -2,6 +2,7 @@ from sanic import Request
 from sanic.exceptions import NotFound
 from sanic_ext import validate
 from sanic_ext.extensions.openapi import openapi
+from sanic_ext.extensions.openapi.definitions import RequestBody
 from tortoise.contrib.pydantic import pydantic_model_creator
 from blueprints import bp_curriculum_board
 from blueprints.auth.decorator import authorized
@@ -10,8 +11,10 @@ from models import Review, Course
 new_review = pydantic_model_creator(Review, exclude=("id", "reviewer_id", "time_created", "courses"))
 review = pydantic_model_creator(Review, exclude=("courses",))
 
+
 @bp_curriculum_board.post("/course/<course_id:int>/reviews")
-@openapi.body({"application/json": Review})
+@openapi.body(
+    RequestBody({"application/json": new_review.construct(title="title", content="content", rank="C+", remark=10)}))
 @authorized()
 @validate(json=new_review)
 async def add_review(request: Request, body: new_review, course_id: int):

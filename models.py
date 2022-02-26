@@ -15,6 +15,7 @@ class Course(Model):
 class Review(Model):
     id = fields.IntField(pk=True)
     title = fields.TextField()
+    content = fields.TextField()
     reviewer_id = fields.IntField()
     time_created: DatetimeField = fields.DatetimeField(auto_now_add=True)
     rank = fields.TextField()
