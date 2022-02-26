@@ -1,26 +1,15 @@
 from sanic import Sanic
 from sanic_ext import Extend
 from tortoise import Tortoise
+from tortoise.contrib.sanic import register_tortoise
 
 from blueprints import bp_curriculum_board, bp_auth
 
 app: Sanic = Sanic("CurriculumBoard")
 Extend(app)
 
-
-@app.listener("before_server_start")
-async def init_orm(_, __):
-    await Tortoise.init(
-        db_url='sqlite://test.sqlite3',
-        modules={'models': ['models']}
-    )
-    await Tortoise.generate_schemas()
-
-
-@app.listener("after_server_stop")
-async def close_orm(_, __):
-    await Tortoise.close_connections()
-
+register_tortoise(app, db_url='sqlite://:memory:',
+                  modules={'models': ['models']}, generate_schemas=True)
 
 if __name__ == "__main__":
     app.config.FALLBACK_ERROR_FORMAT = "json"
