@@ -1,6 +1,3 @@
-import asyncio
-from typing import Dict, List
-
 from sanic import Sanic
 from sanic_ext import Extend
 from tortoise import Tortoise, run_async
@@ -10,12 +7,6 @@ from config import model_modules
 
 app: Sanic = Sanic("CurriculumBoard")
 Extend(app)
-
-
-@app.listener("after_server_stop")
-async def close_orm(_, __):
-    await Tortoise.close_connections()
-
 
 register_tortoise(app, db_url='sqlite://test.sqlite3',
                   modules={'models': model_modules}, generate_schemas=True)
