@@ -13,6 +13,8 @@ from models import Review, Course
 from utils.sanic_helper import jsonify_response, jsonify_list_response
 from utils.tortoise_fix import pmc
 
+Tortoise.init_models(["blueprints.curriculum_board.api"], "models")
+
 NewReviewPyd = pmc(Review, exclude=("id", "reviewer_id", "time_created", "courses"))
 ReviewPyd = pmc(Review, exclude=("courses",))
 NewCoursePyd = pmc(Course, exclude=("id", "review_list"))
@@ -28,6 +30,15 @@ async def add_course(request: Request, body: NewCoursePyd):
     course_added = await Course.create(**body.dict())
     print(str(CoursePyd.schema()))
     return await jsonify_response(CoursePyd, course_added)
+
+
+@bp_curriculum_board.get("/courses/<course_id:int>")
+@authorized()
+async def get_course(request: Request, course_id: int):
+    course: Optional[Course] = await Course.get_or_none(id=course_id)
+    if course is None:
+        raise NotFound(f"Course with id {course_id} is not found")
+    return await jsonify_response(CoursePyd, course)
 
 
 @bp_curriculum_board.post("/courses/<course_id:int>/reviews")
