@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from sanic import Request
 from sanic.exceptions import NotFound
@@ -8,16 +8,25 @@ from sanic_ext.extensions.openapi.definitions import RequestBody
 
 from blueprints import bp_curriculum_board
 from blueprints.auth.decorator import authorized
-from models import Review, Course
+from models import Review, Course, CourseGroup
 from utils.sanic_helper import jsonify_response, jsonify_list_response
-from utils.tortoise_fix import pmc
+from utils.tortoise_fix import pmc, pqc
 
 NewReviewPyd = pmc(Review, exclude=("id", "reviewer_id", "time_created", "courses"))
 GetReviewPyd = pmc(Review, exclude=("courses", "reviewer_id"))
-ReviewPyd = pmc(Review, exclude=("courses",))
-NewCoursePyd = pmc(Course, exclude=("id", "review_list"))
-CoursePyd = pmc(Course, exclude=("review_list.reviewer_id",))
 
+NewCoursePyd = pmc(Course, exclude=("id", "review_list"))
+GetCoursePyd = pmc(Course, exclude=("review_list.reviewer_id",))
+
+GetSingleCourseGroupPyd = pmc(CourseGroup, exclude=("course_list.review_list.reviewer_id",))
+GetMultiCourseGroupsPyd = pqc(CourseGroup,
+                              exclude=(
+                                  "course_list.review_list",))  # TODO: Can we call .json(),.dict() upon pqc, like pmc?
+
+
+# TODO: get course group list and return a GetMultiCourseGroupsPyd
+# TODO: delete review (with user authorization confirmed)
+# TODO: update review (with user authorization confirmed)
 
 @bp_curriculum_board.post("/courses")
 @openapi.body(
@@ -27,14 +36,21 @@ CoursePyd = pmc(Course, exclude=("review_list.reviewer_id",))
 @openapi.response(
     200,
     {
-        "application/json": CoursePyd.construct(review_list=[GetReviewPyd.construct()]),
+        "application/json": GetCoursePyd.construct(review_list=[GetReviewPyd.construct()]),
     }
 )
 @authorized()
 @validate(json=NewCoursePyd)
 async def add_course(request: Request, body: NewCoursePyd):
-    course_added = await Course.create(**body.dict())
-    return await jsonify_response(CoursePyd, course_added)
+    body_dict: dict[str, Any] = body.dict()
+    group: Optional[CourseGroup] = await CourseGroup.get_or_none(code=body_dict['code'])
+    if group is None:
+        group = await CourseGroup.create(**body_dict)
+
+    course_added = await Course.create(**body_dict)
+    await group.course_list.add(course_added)
+
+    return await jsonify_response(GetCoursePyd, course_added)
 
 
 @bp_curriculum_board.get("/courses/<course_id:int>")
@@ -42,7 +58,7 @@ async def add_course(request: Request, body: NewCoursePyd):
 @openapi.response(
     200,
     {
-        "application/json": CoursePyd.construct(review_list=[GetReviewPyd.construct()]),
+        "application/json": GetCoursePyd.construct(review_list=[GetReviewPyd.construct()]),
     }
 )
 @authorized()
@@ -50,7 +66,7 @@ async def get_course(request: Request, course_id: int):
     course: Optional[Course] = await Course.get_or_none(id=course_id)
     if course is None:
         raise NotFound(f"Course with id {course_id} is not found")
-    return await jsonify_response(CoursePyd, course)
+    return await jsonify_response(GetCoursePyd, course)
 
 
 @bp_curriculum_board.post("/courses/<course_id:int>/reviews")
