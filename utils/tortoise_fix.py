@@ -130,7 +130,7 @@ def pqc(
             if not is_default
             else ""
         )
-        return fqname + postfix
+        return fqname + postfix + "_list"
 
     return pydantic_queryset_creator(cls, name=name or get_name(), exclude=exclude, include=include, computed=computed,
                                      allow_cycles=allow_cycles, sort_alphabetically=sort_alphabetically)

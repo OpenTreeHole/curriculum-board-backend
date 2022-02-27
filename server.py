@@ -1,12 +1,13 @@
 import multiprocessing
 
-from sanic import Sanic
+from sanic import Sanic, HTTPResponse
 from sanic_ext import Extend
 from sanic_ext.extensions.openapi.constants import SecuritySchemeAuthorization
 from tortoise import Tortoise, run_async
 from tortoise.contrib.sanic import register_tortoise
 
 from config import model_modules
+from utils.sanic_helper import standardize
 
 app: Sanic = Sanic("CurriculumBoard")
 Extend(app)

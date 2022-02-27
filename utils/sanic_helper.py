@@ -1,6 +1,7 @@
 from typing import Type, List
 
 from sanic import json, HTTPResponse
+from sanic_ext.extensions.openapi.definitions import Response
 from tortoise import Model
 from tortoise.contrib.pydantic import PydanticModel
 
@@ -20,3 +21,28 @@ async def jsonify_list_response(cls: Type[PydanticModel], obj: list[Model]) -> H
 
 async def jsonify_response(cls: Type[PydanticModel], obj: Model) -> HTTPResponse:
     return json(await jsonify(cls, obj), dumps=lambda x: x)
+
+
+def standardize(obj: str | object, status=200):
+    if obj is str:
+        return {
+            "status_code": status,
+            "description": "Success",
+            "message": obj
+        }
+    else:
+        return {
+            "status_code": status,
+            "description": "Success",
+            "data": obj
+        }
+
+
+def standard_openapi_response(obj: str | object, status=200, description: str | None = None):
+    return Response(
+        {
+            "application/json": standardize(obj)
+        },
+        description=description,
+        status=status
+    )

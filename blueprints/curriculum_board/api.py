@@ -1,7 +1,7 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
-from sanic import Request
-from sanic.exceptions import NotFound
+from sanic import Request, text
+from sanic.exceptions import NotFound, Unauthorized
 from sanic_ext import validate
 from sanic_ext.extensions.openapi import openapi
 from sanic_ext.extensions.openapi.definitions import RequestBody
@@ -15,24 +15,33 @@ from utils.tortoise_fix import pmc, pqc
 NewReviewPyd = pmc(Review, exclude=("id", "reviewer_id", "time_created", "courses"))
 GetReviewPyd = pmc(Review, exclude=("courses", "reviewer_id"))
 
-NewCoursePyd = pmc(Course, exclude=("id", "review_list"))
-GetCoursePyd = pmc(Course, exclude=("review_list.reviewer_id",))
+NewCoursePyd = pmc(Course, exclude=("id", "review_list", "course_groups"))
+GetCoursePyd = pmc(Course, exclude=("review_list.reviewer_id", "course_groups"))
+GetMultiCoursesPyd = pmc(CourseGroup, exclude=("course_list", "course_groups"))
 
 GetSingleCourseGroupPyd = pmc(CourseGroup, exclude=("course_list.review_list.reviewer_id",))
-GetMultiCourseGroupsPyd = pqc(CourseGroup,
-                              exclude=(
-                                  "course_list.review_list",))  # TODO: Can we call .json(),.dict() upon pqc, like pmc?
+GetMultiCourseGroupsPyd = pmc(CourseGroup, exclude=("course_list.review_list",))
 
 
-# TODO: get course group list and return a GetMultiCourseGroupsPyd
-# TODO: delete review (with user authorization confirmed)
-# TODO: update review (with user authorization confirmed)
+@bp_curriculum_board.get("/courses")
+@openapi.description("### Get all course groups (i.e. courses with the same code).")
+@openapi.response(
+    200,
+    {
+        "application/json": [GetMultiCourseGroupsPyd.construct(course_list=[GetMultiCoursesPyd.construct()])],
+    }
+)
+@authorized()
+async def get_course_groups(request: Request):
+    course_groups: list[CourseGroup] = await CourseGroup.all()
+    return await jsonify_list_response(GetMultiCourseGroupsPyd, course_groups)
+
 
 @bp_curriculum_board.post("/courses")
 @openapi.body(
     RequestBody({"application/json": NewCoursePyd.construct()})
 )
-@openapi.description("Add a new course.")
+@openapi.description("### Add a new course.")
 @openapi.response(
     200,
     {
@@ -54,7 +63,7 @@ async def add_course(request: Request, body: NewCoursePyd):
 
 
 @bp_curriculum_board.get("/courses/<course_id:int>")
-@openapi.description("Get a course object with given course id.")
+@openapi.description("### Get a course object with given course id.")
 @openapi.response(
     200,
     {
@@ -80,7 +89,7 @@ async def get_course(request: Request, course_id: int):
         )
     })
 )
-@openapi.description("Add a new review on course with given course id.")
+@openapi.description("### Add a new review on course with given course id.")
 @openapi.response(
     200,
     {
@@ -99,8 +108,56 @@ async def add_review(request: Request, body: NewReviewPyd, course_id: int):
     return await jsonify_response(GetReviewPyd, review_added)
 
 
+@bp_curriculum_board.delete("/reviews/<review_id:int>")
+@openapi.description("### Delete a review with given review id.")
+@openapi.response(
+    200,
+    {
+        "text/plain": "Successfully remove review with id: 1."
+    }
+)
+@authorized()
+async def remove_review(request: Request, review_id: int):
+    this_review: Optional[Review] = await Review.get_or_none(id=review_id)
+    if this_review is None:
+        raise NotFound(f"Review with id {review_id} is not found")
+    if request.ctx.user_id != this_review.reviewer_id and not request.ctx.is_admin:
+        raise Unauthorized("You have no permission to remove this review!")
+    await this_review.delete()
+    return text(f"Successfully remove review with id: {review_id}.")
+
+
+@bp_curriculum_board.put("/reviews/<review_id:int>")
+@openapi.body(
+    RequestBody({
+        "application/json": NewReviewPyd.construct(
+            title="review title",
+            content="review content",
+            rank="B+",
+            remark=9
+        )
+    })
+)
+@openapi.description("### Edit a review with given review id.")
+@openapi.response(
+    200,
+    {
+        "application/json": GetReviewPyd.construct()
+    }
+)
+@authorized()
+async def modify_review(request: Request, body: NewReviewPyd, review_id: int):
+    this_review: Optional[Review] = await Review.get_or_none(id=review_id)
+    if this_review is None:
+        raise NotFound(f"Review with id {review_id} is not found")
+    if request.ctx.user_id != this_review.reviewer_id and not request.ctx.is_admin:
+        raise Unauthorized("You have no permission to remove this review!")
+    await this_review.update_from_dict(**body.dict())
+    return await jsonify_response(GetReviewPyd, this_review)
+
+
 @bp_curriculum_board.get("/courses/<course_id:int>/reviews")
-@openapi.description("Get all reviews on course with given course id.")
+@openapi.description("### Get all reviews on course with given course id.")
 @openapi.response(
     200,
     {

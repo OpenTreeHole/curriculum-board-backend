@@ -19,7 +19,9 @@ class Course(Model):
     code_id = fields.TextField()
     credit = fields.FloatField()
     department = fields.TextField()
-    teacher = fields.TextField()
+    teachers = fields.TextField()
+    max_student = fields.IntField()
+    week_hour = fields.IntField()
 
     year = fields.TextField()
     """

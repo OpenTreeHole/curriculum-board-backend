@@ -23,9 +23,11 @@ def authorized():
                     raise Unauthorized("Internal Error: Cannot validate authorization information.")
                 try:
                     user_id: int = response.json().get('user_id')
+                    is_admin: bool = response.json().get('is_admin')
                 except Exception:
                     raise Unauthorized("Internal Error: Cannot validate authorization information.")
                 request.ctx.user_id = user_id
+                request.ctx.is_admin = is_admin
                 return await f(request, *args, **kwargs)
             raise Unauthorized("Authorization Information Needed.")
 
