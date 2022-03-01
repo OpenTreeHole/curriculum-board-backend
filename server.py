@@ -6,14 +6,13 @@ from sanic_ext.extensions.openapi.constants import SecuritySchemeAuthorization
 from tortoise import Tortoise, run_async
 from tortoise.contrib.sanic import register_tortoise
 
-from config import model_modules
+from config import model_modules, database_config
 from utils.sanic_helper import standardize
 
 app: Sanic = Sanic("CurriculumBoard")
 Extend(app)
 
-register_tortoise(app, db_url='sqlite://test.sqlite3',
-                  modules={'models': model_modules}, generate_schemas=True)
+register_tortoise(app, config=database_config, generate_schemas=True)
 
 
 def main():

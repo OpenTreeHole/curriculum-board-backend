@@ -4,15 +4,13 @@ import os
 
 from tortoise import Tortoise
 
-from config import model_modules
+from config import model_modules, database_config
 
 LESSON_JSON = r"D:\Download\lessons(1)\lessons\lessons_364.json"
 
 
 async def main():
-    # TODO move db_url into config.py
-    await Tortoise.init(db_url='sqlite://test.sqlite3',
-                        modules={'models': model_modules})
+    await Tortoise.init(config=database_config)
     with open(LESSON_JSON, 'r', encoding='utf8') as fp:
         json_data = json.load(fp)
         json_course: dict
