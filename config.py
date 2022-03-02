@@ -1,3 +1,10 @@
+from typing import Optional
+
+import aiohttp
+from aiocache import Cache
+from aiocache.serializers import JsonSerializer
+from aiohttp import ClientSession
+
 user_verification_address = "https://api.fduhole.com/users"
 model_modules: list[str] = ['models']
 database_config = {
@@ -14,7 +21,7 @@ database_config = {
         #     }
         # },
         # Using a DB_URL string
-        'default': 'sqlite://test.sqlite3'
+        'default': 'mysql://root:root@localhost:3306/board'
     },
     'apps': {
         'models': {
@@ -26,3 +33,4 @@ database_config = {
     'use_tz': False,
     'timezone': 'UTC'
 }
+global_json_cache = Cache(serializer=JsonSerializer())

@@ -6,10 +6,13 @@ name = "pypi"
 [packages]
 sanic = "*"
 sanic_ext = "*"
-requests = "*"
 tortoise-orm = "*"
 aiomysql = "*"
 pydantic = "*"
+aiocache = "*"
+aiohttp = "*"
+cchardet = "*"
+aiodns = "*"
 
 [dev-packages]
 
