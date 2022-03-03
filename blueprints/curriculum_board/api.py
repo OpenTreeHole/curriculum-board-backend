@@ -17,10 +17,9 @@ GetReviewPyd = pmc(Review, exclude=("courses", "reviewer_id"))
 
 NewCoursePyd = pmc(Course, exclude=("id", "review_list", "course_groups"))
 GetCoursePyd = pmc(Course, exclude=("review_list.reviewer_id", "course_groups"))
-GetMultiCoursesPyd = pmc(CourseGroup, exclude=("course_list", "course_groups"))
 
 GetSingleCourseGroupPyd = pmc(CourseGroup, exclude=("course_list.review_list.reviewer_id",))
-GetMultiCourseGroupsPyd = pmc(CourseGroup, exclude=("course_list.review_list",))
+GetMultiCourseGroupsPyd = pmc(CourseGroup, exclude=("course_list.review_list", "course_list.course_groups"))
 
 
 @bp_curriculum_board.get("/courses")
@@ -28,7 +27,7 @@ GetMultiCourseGroupsPyd = pmc(CourseGroup, exclude=("course_list.review_list",))
 @openapi.response(
     200,
     {
-        "application/json": [GetMultiCourseGroupsPyd.construct(course_list=[GetMultiCoursesPyd.construct()])],
+        "application/json": [GetMultiCourseGroupsPyd.construct(course_list=[GetCoursePyd.construct()])],
     }
 )
 @authorized()
