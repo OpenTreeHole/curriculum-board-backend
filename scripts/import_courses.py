@@ -46,7 +46,6 @@ async def main():
 
             course_added = await Course.create(**body_dict)
             await group.course_list.add(course_added)
-            print(json_course['code'])
 
 
 if __name__ == "__main__":
