@@ -1,6 +1,25 @@
-FROM python:3.10
+FROM python:3.10 as builder
+
+ENV PIPENV_VENV_IN_PROJECT="enabled"
+
+WORKDIR /backend
+
 RUN pip install pipenv
-ADD . /backend/
-WORKDIR /backend/
+
+COPY Pipfile /backend/
+
 RUN pipenv install
+
+FROM python:3.10-slim
+
+WORKDIR /backend
+
+COPY --from=builder /backend/.venv /backend/.venv
+
+COPY . /backend
+
+ENV PATH="/backend/.venv/bin:$PATH"
+
+EXPOSE 8000
+
 CMD pipenv run python server.py
