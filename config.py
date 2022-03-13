@@ -4,6 +4,7 @@ import aiohttp
 from aiocache import Cache
 from aiocache.serializers import JsonSerializer
 from aiohttp import ClientSession
+import os
 
 user_verification_address = "https://api.fduhole.com/users"
 model_modules: list[str] = ['models']
@@ -21,7 +22,7 @@ database_config = {
         #     }
         # },
         # Using a DB_URL string
-        'default': 'mysql://root:root@localhost:3306/board'
+        'default': 'mysql://root:' + os.getenv('MYSQL_ROOT_PASSWORD', 'root') + '@backend_database:3306/board'
     },
     'apps': {
         'models': {

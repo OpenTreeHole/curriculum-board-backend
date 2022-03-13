@@ -1,0 +1,28 @@
+services:
+  database:
+    image: mysql:8.0
+    container_name: backend_database
+    networks:
+      - backend_lan
+    volumes:
+      - mysql-data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=board
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: backend_server
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    networks:
+      - backend_lan
+    ports:
+      - 8000:8000
+
+volumes:
+  mysql-data:
+
+networks:
+  backend_lan:
