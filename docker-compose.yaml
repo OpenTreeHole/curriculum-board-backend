@@ -14,6 +14,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: backend_server
+    depends_on:
+      - database
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     networks:
