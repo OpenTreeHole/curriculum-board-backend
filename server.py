@@ -7,10 +7,9 @@ from sanic_ext.extensions.openapi.constants import SecuritySchemeAuthorization
 from tortoise import Tortoise
 from tortoise.contrib.sanic import register_tortoise
 
-from config import model_modules, database_config
-
 app: Sanic = Sanic("CurriculumBoard")
 Extend(app)
+from config import model_modules, database_config
 
 register_tortoise(app, config=database_config, generate_schemas=True)
 

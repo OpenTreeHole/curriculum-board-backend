@@ -1,28 +1,16 @@
-from typing import Optional
-
-import aiohttp
 from aiocache import Cache
 from aiocache.serializers import JsonSerializer
-from aiohttp import ClientSession
-import os
+from sanic import Sanic
+
+app = Sanic.get_app()
 
 user_verification_address = "https://api.fduhole.com/users"
+
 model_modules: list[str] = ['models']
+
 database_config = {
     'connections': {
-        # Dict format for connection
-        # 'default': {
-        #     'engine': 'tortoise.backends.asyncpg',
-        #     'credentials': {
-        #         'host': 'localhost',
-        #         'port': '5432',
-        #         'user': 'tortoise',
-        #         'password': 'qwerty123',
-        #         'database': 'test',
-        #     }
-        # },
-        # Using a DB_URL string
-        'default': 'mysql://root:' + os.getenv('MYSQL_ROOT_PASSWORD', 'root') + '@backend_database:3306/board'
+        'default': app.config.get('DB_URL', 'mysql://username:password@mysql:3306/cb')
     },
     'apps': {
         'models': {
@@ -34,4 +22,5 @@ database_config = {
     'use_tz': False,
     'timezone': 'UTC'
 }
+
 global_json_cache = Cache(serializer=JsonSerializer())
