@@ -18,12 +18,13 @@ GetReviewPyd = pmc(Review, exclude=("courses", "reviewer_id"))
 NewCoursePyd = pmc(Course, exclude=("id", "review_list", "course_groups"))
 GetCoursePyd = pmc(Course, exclude=("review_list.reviewer_id", "course_groups"))
 
-GetSingleCourseGroupPyd = pmc(CourseGroup, exclude=("course_list.review_list.reviewer_id",))
+GetSingleCourseGroupPyd = pmc(CourseGroup, exclude=("course_list.review_list.reviewer_id", "course_list.course_groups"))
 GetMultiCourseGroupsPyd = pmc(CourseGroup, exclude=("course_list.review_list", "course_list.course_groups"))
 
 
 @bp_curriculum_board.get("/courses")
-@openapi.description("### Get all course groups (i.e. courses with the same code).")
+@openapi.description(
+    "### Get all course groups (i.e. courses with the same code). The response excludes all reviews of the group.")
 @openapi.response(
     200,
     {
@@ -34,6 +35,23 @@ GetMultiCourseGroupsPyd = pmc(CourseGroup, exclude=("course_list.review_list", "
 async def get_course_groups(request: Request):
     course_groups: list[CourseGroup] = await CourseGroup.all()
     return await jsonify_list_response(GetMultiCourseGroupsPyd, course_groups)
+
+
+@bp_curriculum_board.get("/courses/<group_id:int>")
+@openapi.description(
+    "### Get single course group (i.e. courses with the same code). The response includes all reviews of the group.")
+@openapi.response(
+    200,
+    {
+        "application/json": [GetSingleCourseGroupPyd.construct(course_list=[GetCoursePyd.construct()])],
+    }
+)
+@authorized()
+async def get_course_group(request: Request, group_id: int):
+    course_group: Optional[CourseGroup] = await CourseGroup.get_or_none(id=group_id)
+    if course_group is None:
+        raise NotFound(f"CourseGroup with id {group_id} is not found")
+    return await jsonify_response(GetSingleCourseGroupPyd, course_group)
 
 
 @bp_curriculum_board.post("/courses")
