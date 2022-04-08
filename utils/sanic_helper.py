@@ -1,4 +1,4 @@
-from typing import Type, List
+from typing import Type, Union, Optional
 
 from sanic import json, HTTPResponse
 from sanic_ext.extensions.openapi.definitions import Response
@@ -23,7 +23,7 @@ async def jsonify_response(cls: Type[PydanticModel], obj: Model) -> HTTPResponse
     return json(await jsonify(cls, obj), dumps=lambda x: x)
 
 
-def standardize(obj: str | object, status=200):
+def standardize(obj: Union[str, object], status=200):
     if obj is str:
         return {
             "status_code": status,
@@ -38,7 +38,7 @@ def standardize(obj: str | object, status=200):
         }
 
 
-def standard_openapi_response(obj: str | object, status=200, description: str | None = None):
+def standard_openapi_response(obj: Union[str, object], status=200, description: Optional[str] = None):
     return Response(
         {
             "application/json": standardize(obj)
