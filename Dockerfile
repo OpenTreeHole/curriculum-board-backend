@@ -1,7 +1,5 @@
 FROM python:3.10 as builder
 
-ENV PIPENV_VENV_IN_PROJECT="enabled"
-
 WORKDIR /backend
 
 RUN pip install pipenv
