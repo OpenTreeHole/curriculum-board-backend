@@ -8,7 +8,7 @@ RUN pip install pipenv
 
 COPY Pipfile /backend/
 
-RUN pipenv install
+RUN mkdir .venv && pipenv install
 
 FROM python:3.10-slim
 
