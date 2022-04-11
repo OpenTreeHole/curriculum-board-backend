@@ -1,5 +1,5 @@
 from tortoise import fields
-from tortoise.fields import ManyToManyRelation
+from tortoise.fields import ManyToManyRelation, JSONField
 from tortoise.models import Model
 
 
@@ -23,7 +23,7 @@ class Course(Model):
     max_student = fields.IntField()
     week_hour = fields.IntField()
 
-    year = fields.TextField()
+    year = fields.IntField()
     """
     学年。如果是非秋季学期，则年数为（实际日期年数 - 1）。
     """
@@ -49,6 +49,13 @@ class Review(Model):
     content = fields.TextField()
     reviewer_id = fields.IntField()
     time_created = fields.DatetimeField(auto_now_add=True)
-    rank = fields.TextField()
-    remark = fields.IntField()
+    rank = fields.JSONField()
+    upvoters = fields.JSONField()
+    downvoters = fields.JSONField()
     courses: fields.ManyToManyRelation[Course]
+
+    def remark(self) -> int:
+        return len(self.upvoters) - len(self.downvoters)
+
+    class PydanticMeta:
+        computed = ['remark']

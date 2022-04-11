@@ -1,7 +1,7 @@
 from typing import Optional, Dict, Any, List
 
 from sanic import Request, text
-from sanic.exceptions import NotFound, Unauthorized
+from sanic.exceptions import NotFound, Unauthorized, InvalidUsage
 from sanic_ext import validate
 from sanic_ext.extensions.openapi import openapi
 from sanic_ext.extensions.openapi.definitions import RequestBody
@@ -12,11 +12,15 @@ from models import Review, Course, CourseGroup
 from utils.sanic_helper import jsonify_response, jsonify_list_response
 from utils.tortoise_fix import pmc, pqc
 
-NewReviewPyd = pmc(Review, exclude=("id", "reviewer_id", "time_created", "courses"))
-GetReviewPyd = pmc(Review, exclude=("courses", "reviewer_id"))
+# 删除，保证不会 require "remark" 这个字段
+NewReviewPyd = pmc(Review, exclude=("id", "reviewer_id", "time_created", "courses", "upvoters", "downvoters", "remark"),
+                   exclude_readonly=True)
+GetReviewPyd = pmc(Review, exclude=("courses", "reviewer_id", "upvoters", "downvoters"))
 
 NewCoursePyd = pmc(Course, exclude=("id", "review_list", "course_groups"))
-GetCoursePyd = pmc(Course, exclude=("review_list.reviewer_id", "course_groups"))
+GetCoursePyd = pmc(Course, exclude=(
+    "review_list.reviewer_id", "review_list.courses", "review_list.upvoters", "review_list.downvoters",
+    "course_groups"))
 
 GetSingleCourseGroupPyd = pmc(CourseGroup, exclude=("course_list.review_list.reviewer_id", "course_list.course_groups"))
 GetMultiCourseGroupsPyd = pmc(CourseGroup, exclude=("course_list.review_list", "course_list.course_groups"))
@@ -43,7 +47,7 @@ async def get_course_groups(request: Request):
 @openapi.response(
     200,
     {
-        "application/json": [GetSingleCourseGroupPyd.construct(course_list=[GetCoursePyd.construct()])],
+        "application/json": GetSingleCourseGroupPyd.construct(course_list=[GetCoursePyd.construct()]),
     }
 )
 @authorized()
@@ -101,8 +105,7 @@ async def get_course(request: Request, course_id: int):
         "application/json": NewReviewPyd.construct(
             title="review title",
             content="review content",
-            rank="B+",
-            remark=9
+            rank={'overall': 'SSS'}
         )
     })
 )
@@ -120,7 +123,8 @@ async def add_review(request: Request, body: NewReviewPyd, course_id: int):
     if this_course is None:
         raise NotFound(f"Course with id {course_id} is not found")
 
-    review_added: Review = await Review.create(**body.dict(), reviewer_id=request.ctx.user_id)
+    review_added: Review = await Review.create(**body.dict(), reviewer_id=request.ctx.user_id, upvoters=[],
+                                               downvoters=[])
     await this_course.review_list.add(review_added)
     return await jsonify_response(GetReviewPyd, review_added)
 
@@ -150,8 +154,7 @@ async def remove_review(request: Request, review_id: int):
         "application/json": NewReviewPyd.construct(
             title="review title",
             content="review content",
-            rank="B+",
-            remark=9
+            rank={'overall': 'SSS'}
         )
     })
 )
@@ -163,13 +166,63 @@ async def remove_review(request: Request, review_id: int):
     }
 )
 @authorized()
+@validate(json=NewReviewPyd)
 async def modify_review(request: Request, body: NewReviewPyd, review_id: int):
     this_review: Optional[Review] = await Review.get_or_none(id=review_id)
     if this_review is None:
         raise NotFound(f"Review with id {review_id} is not found")
+
     if request.ctx.user_id != this_review.reviewer_id and not request.ctx.is_admin:
         raise Unauthorized("You have no permission to remove this review!")
-    await this_review.update_from_dict(**body.dict())
+    await this_review.update_from_dict(data=body.dict())
+    await this_review.save()
+    return await jsonify_response(GetReviewPyd, this_review)
+
+
+@bp_curriculum_board.patch("/reviews/<review_id:int>")
+@openapi.body(
+    RequestBody({
+        "application/json": {'upvote': True}
+    })
+)
+@openapi.description("### Up-vote or down-vote a review with given review id. If having voted, it cancels the vote.")
+@openapi.response(
+    200,
+    {
+        "application/json": GetReviewPyd.construct()
+    }
+)
+@authorized()
+async def vote_for_review(request: Request, review_id: int):
+    this_review: Optional[Review] = await Review.get_or_none(id=review_id)
+    if this_review is None:
+        raise NotFound(f"Review with id {review_id} is not found")
+
+    upvote: Optional[bool] = request.json.get('upvote', None)
+    if upvote is None:
+        raise InvalidUsage('You must specify upvote field')
+    upvoters: list[int] = this_review.upvoters.copy()
+    downvoters: list[int] = this_review.downvoters.copy()
+    if upvote:
+        if request.ctx.user_id in upvoters:
+            upvoters.remove(request.ctx.user_id)
+        else:
+            upvoters.append(request.ctx.user_id)
+            try:
+                downvoters.remove(request.ctx.user_id)
+            except:
+                pass
+    else:
+        if request.ctx.user_id in downvoters:
+            downvoters.remove(request.ctx.user_id)
+        else:
+            downvoters.append(request.ctx.user_id)
+            try:
+                upvoters.remove(request.ctx.user_id)
+            except:
+                pass
+    await this_review.update_from_dict({"upvoters": upvoters, "downvoters": downvoters})
+    await this_review.save()
     return await jsonify_response(GetReviewPyd, this_review)
 
 
