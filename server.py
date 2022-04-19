@@ -40,7 +40,10 @@ async def migrate_database():
     from aerich import Command
     command = Command(tortoise_config=database_config)
     await command.init()
-    # await command.init_db(safe=True)
+    try:
+        await command.init_db(safe=True)
+    except:
+        pass
     await command.migrate()
     await command.upgrade()
 
