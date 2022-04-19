@@ -44,7 +44,10 @@ async def migrate_database():
         await command.init_db(safe=True)
     except:
         pass
-    await command.migrate()
+    try:
+        await command.migrate()
+    except:
+        pass
     await command.upgrade()
 
 
