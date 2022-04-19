@@ -47,8 +47,11 @@ class Review(Model):
     title = fields.TextField()
 
     content = fields.TextField()
+    history = fields.JSONField()
     reviewer_id = fields.IntField()
     time_created = fields.DatetimeField(auto_now_add=True)
+    # 我们手动维护这一字段，无需每次都更新
+    time_updated = fields.DatetimeField(auto_now_add=True)
     rank = fields.JSONField()
     upvoters = fields.JSONField()
     downvoters = fields.JSONField()

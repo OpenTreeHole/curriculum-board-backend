@@ -1,3 +1,5 @@
+import datetime
+import time
 from typing import Optional, Dict, Any, List
 
 from sanic import Request, text
@@ -9,14 +11,15 @@ from sanic_ext.extensions.openapi.definitions import RequestBody
 from blueprints import bp_curriculum_board
 from blueprints.auth.decorator import authorized
 from models import Review, Course, CourseGroup
-from utils.sanic_helper import jsonify_response, jsonify_list_response
+from utils.sanic_helper import jsonify_response, jsonify_list_response, jsonify
 from utils.tortoise_fix import pmc, pqc
 
 # 删除，保证不会 require "remark" 这个字段
-NewReviewPyd = pmc(Review, exclude=("id", "reviewer_id", "time_created", "courses", "upvoters", "downvoters", "remark"),
+NewReviewPyd = pmc(Review, exclude=(
+    "id", "reviewer_id", "time_created", "courses", "upvoters", "downvoters", "remark", "history"),
                    exclude_readonly=True)
 GetReviewPyd = pmc(Review, exclude=("courses", "reviewer_id", "upvoters", "downvoters"))
-
+HistoryReviewPyd = pmc(Review, exclude=("id", "courses", "reviewer_id", "upvoters", "downvoters", "history"))
 NewCoursePyd = pmc(Course, exclude=("id", "review_list", "course_groups"))
 GetCoursePyd = pmc(Course, exclude=(
     "review_list.reviewer_id", "review_list.courses", "review_list.upvoters", "review_list.downvoters",
@@ -124,7 +127,7 @@ async def add_review(request: Request, body: NewReviewPyd, course_id: int):
         raise NotFound(f"Course with id {course_id} is not found")
 
     review_added: Review = await Review.create(**body.dict(), reviewer_id=request.ctx.user_id, upvoters=[],
-                                               downvoters=[])
+                                               downvoters=[], history=[])
     await this_course.review_list.add(review_added)
     return await jsonify_response(GetReviewPyd, review_added)
 
@@ -174,6 +177,13 @@ async def modify_review(request: Request, body: NewReviewPyd, review_id: int):
 
     if request.ctx.user_id != this_review.reviewer_id and not request.ctx.is_admin:
         raise Unauthorized("You have no permission to remove this review!")
+
+    this_review.history.append({
+        'alter_by': request.ctx.user_id,
+        'time': datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+        'original': await jsonify(HistoryReviewPyd, this_review)
+    })
+    this_review.time_updated = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
     await this_review.update_from_dict(data=body.dict())
     await this_review.save()
     return await jsonify_response(GetReviewPyd, this_review)

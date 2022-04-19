@@ -1,13 +1,16 @@
 from aiocache import Cache
 from aiocache.serializers import JsonSerializer
 from sanic import Sanic
+from sanic_ext import Extend
+
+app: Sanic = Sanic("CurriculumBoard")
+Extend(app)
 
 app = Sanic.get_app()
 
 user_verification_address = "https://api.fduhole.com/users"
 
-model_modules: list[str] = ['models']
-
+model_modules: list[str] = ['models', "aerich.models"]
 database_config = {
     'connections': {
         'default': app.config.get('DB_URL', 'mysql://username:password@mysql:3306/cb')

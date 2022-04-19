@@ -1,15 +1,12 @@
+import asyncio
 import multiprocessing
 
 import aiohttp
-from sanic import Sanic
-from sanic_ext import Extend
 from sanic_ext.extensions.openapi.constants import SecuritySchemeAuthorization
 from tortoise import Tortoise
 from tortoise.contrib.sanic import register_tortoise
 
-app: Sanic = Sanic("CurriculumBoard")
-Extend(app)
-from config import model_modules, database_config
+from config import model_modules, database_config, app
 
 register_tortoise(app, config=database_config, generate_schemas=True)
 
@@ -39,5 +36,17 @@ def main():
     )
 
 
+async def migrate_database():
+    from aerich import Command
+    command = Command(tortoise_config=database_config)
+    await command.init()
+    # await command.init_db(safe=True)
+    await command.migrate()
+    await command.upgrade()
+
+
 if __name__ == "__main__":
+    # 创建事件循环，运行数据库迁移
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(migrate_database())
     main()
