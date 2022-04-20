@@ -19,6 +19,7 @@ NewReviewPyd = pmc(Review, exclude=(
     "id", "reviewer_id", "time_created", "courses", "upvoters", "downvoters", "remark", "history"),
                    exclude_readonly=True)
 GetReviewPyd = pmc(Review, exclude=("courses", "reviewer_id", "upvoters", "downvoters"))
+GetMyReviewPyd = pmc(Review, exclude=("courses.course_groups","reviewer_id", "upvoters", "downvoters"))
 HistoryReviewPyd = pmc(Review, exclude=("id", "courses", "reviewer_id", "upvoters", "downvoters", "history"))
 NewCoursePyd = pmc(Course, exclude=("id", "review_list", "course_groups"))
 GetCoursePyd = pmc(Course, exclude=(
@@ -192,7 +193,7 @@ async def modify_review(request: Request, body: NewReviewPyd, review_id: int):
 @bp_curriculum_board.patch("/reviews/<review_id:int>")
 @openapi.body(
     RequestBody({
-        "application/json": {'upvote': True}
+        "application/json": [{'upvote': True}]
     })
 )
 @openapi.description("### Up-vote or down-vote a review with given review id. If having voted, it cancels the vote.")
@@ -252,3 +253,19 @@ async def get_reviews(_: Request, course_id: int):
 
     reviews: list[Review] = await this_course.review_list.all()
     return await jsonify_list_response(GetReviewPyd, reviews)
+
+
+@bp_curriculum_board.get("/reviews/me")
+@openapi.description("### Get all reviews published by the user.")
+@openapi.response(
+    200,
+    {
+        "application/json": [GetMyReviewPyd.construct()]
+    }
+)
+@authorized()
+async def get_reviews(request: Request):
+    reviews: list[Review] = await Review.filter(reviewer_id=request.ctx.user_id)
+    # for r in reviews:
+    #     await r.fetch_related("courses")
+    return await jsonify_list_response(GetMyReviewPyd, reviews)
