@@ -7,6 +7,12 @@ from tortoise.contrib.pydantic import PydanticModel
 
 
 async def jsonify(cls: Type[PydanticModel], obj: Model) -> str:
+    try:
+        # 优先使用 from_orm，因为它不会覆写我们手动添加的额外字段，例如 is_me。
+        # 当然，这个方法不会做 prefetch 的工作，所以如果你自己没调用 fetch_related，可能会报错。
+        return cls.from_orm(obj).json()
+    except:
+        pass
     return (await cls.from_tortoise_orm(obj)).json()
 
 

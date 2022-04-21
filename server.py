@@ -31,7 +31,7 @@ def main():
     app.blueprint(bp_auth)
     app.run(
         host="0.0.0.0",
-        workers=multiprocessing.cpu_count(),
+        fast=True,
         port=8000
     )
 
