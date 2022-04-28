@@ -10,6 +10,7 @@ from sanic_ext.extensions.openapi.definitions import RequestBody
 
 from blueprints import bp_curriculum_board
 from blueprints.auth.decorator import authorized
+from config import compress
 from models import Review, Course, CourseGroup
 from utils.sanic_helper import jsonify_response, jsonify_list_response, jsonify
 from utils.tortoise_fix import pmc
@@ -54,6 +55,7 @@ def insert_extra_fields(request: Request, review_list: List[Review]):
     }
 )
 @authorized()
+@compress.compress()
 async def get_course_groups(request: Request):
     course_groups: list[CourseGroup] = await CourseGroup.all()
     return await jsonify_list_response(GetMultiCourseGroupsPyd, course_groups)
@@ -69,6 +71,7 @@ async def get_course_groups(request: Request):
     }
 )
 @authorized()
+@compress.compress()
 async def get_course_group(request: Request, group_id: int):
     course_group: Optional[CourseGroup] = await CourseGroup.get_or_none(id=group_id)
     if course_group is None:
@@ -93,6 +96,7 @@ async def get_course_group(request: Request, group_id: int):
 )
 @authorized()
 @validate(json=NewCoursePyd)
+@compress.compress()
 async def add_course(request: Request, body: NewCoursePyd):
     body_dict: dict[str, Any] = body.dict()
     group: Optional[CourseGroup] = await CourseGroup.get_or_none(code=body_dict['code'])
@@ -114,6 +118,7 @@ async def add_course(request: Request, body: NewCoursePyd):
     }
 )
 @authorized()
+@compress.compress()
 async def get_course(request: Request, course_id: int):
     course: Optional[Course] = await Course.get_or_none(id=course_id)
     if course is None:
@@ -142,6 +147,7 @@ async def get_course(request: Request, course_id: int):
 )
 @authorized()
 @validate(json=NewReviewPyd)
+@compress.compress()
 async def add_review(request: Request, body: NewReviewPyd, course_id: int):
     this_course: Optional[Course] = await Course.get_or_none(id=course_id)
     if this_course is None:
@@ -162,6 +168,7 @@ async def add_review(request: Request, body: NewReviewPyd, course_id: int):
     }
 )
 @authorized()
+@compress.compress()
 async def remove_review(request: Request, review_id: int):
     this_review: Optional[Review] = await Review.get_or_none(id=review_id)
     if this_review is None:
@@ -191,6 +198,7 @@ async def remove_review(request: Request, review_id: int):
 )
 @authorized()
 @validate(json=NewReviewPyd)
+@compress.compress()
 async def modify_review(request: Request, body: NewReviewPyd, review_id: int):
     this_review: Optional[Review] = await Review.get_or_none(id=review_id)
     if this_review is None:
@@ -224,6 +232,7 @@ async def modify_review(request: Request, body: NewReviewPyd, review_id: int):
     }
 )
 @authorized()
+@compress.compress()
 async def vote_for_review(request: Request, review_id: int):
     this_review: Optional[Review] = await Review.get_or_none(id=review_id)
     if this_review is None:
@@ -266,6 +275,7 @@ async def vote_for_review(request: Request, review_id: int):
     }
 )
 @authorized()
+@compress.compress()
 async def get_reviews(request: Request, course_id: int):
     this_course: Optional[Course] = await Course.get_or_none(id=course_id)
     if this_course is None:
@@ -287,6 +297,7 @@ async def get_reviews(request: Request, course_id: int):
     }
 )
 @authorized()
+@compress.compress()
 async def get_reviews(request: Request):
     reviews: list[Review] = await Review.filter(reviewer_id=request.ctx.user_id)
     return await jsonify_list_response(GetMyReviewPyd, reviews)
