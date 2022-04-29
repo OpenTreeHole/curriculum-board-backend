@@ -2,7 +2,9 @@ from aiocache import Cache
 from aiocache.serializers import JsonSerializer
 from sanic import Sanic
 from sanic_ext import Extend
+from sanic_gzip import Compress
 
+compress = Compress()
 app: Sanic = Sanic("CurriculumBoard")
 Extend(app)
 
