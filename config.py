@@ -10,12 +10,13 @@ Extend(app)
 
 app = Sanic.get_app()
 
-user_verification_address = "https://api.fduhole.com/users"
+# SANIC_AUTH_API_URL
+user_verification_address = app.config.get("AUTH_API_URL", "https://testauth.fduhole.com/api/users/me")
 
 model_modules: list[str] = ['models', "aerich.models"]
 database_config = {
     'connections': {
-        'default': app.config.get('DB_URL', 'mysql://username:password@mysql:3306/cb')
+        'default': app.config.get('DB_URL', 'mysql://root:root@127.0.0.1:3306/board')
     },
     'apps': {
         'models': {
