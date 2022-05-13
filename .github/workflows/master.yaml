@@ -25,13 +25,13 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-#      - name: Build and export to Docker
-#        uses: docker/build-push-action@v2
-#        with:
-#          load: true
-#          tags: ${{ env.TEST_TAG }}
-#      - name: Test
-#        run: docker run --rm ${{ env.TEST_TAG }} test
+      #      - name: Build and export to Docker
+      #        uses: docker/build-push-action@v2
+      #        with:
+      #          load: true
+      #          tags: ${{ env.TEST_TAG }}
+      #      - name: Test
+      #        run: docker run --rm ${{ env.TEST_TAG }} test
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
@@ -40,3 +40,5 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.APP_NAME}}:${{ steps.tag.outputs.tag }}
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.APP_NAME}}:latest
+      - name: Deploy
+        run: curl -X POST ${{ secrets.DEPLOY_WEBHOOK_PRODUCTION}}
