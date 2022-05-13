@@ -42,7 +42,7 @@ def authorized():
             if authorization is not None:
                 user_json = await __get_or_fetch_user(authorization)
                 try:
-                    user_id: int = user_json.get('user_id')
+                    user_id: int = user_json.get('id')
                     is_admin: bool = user_json.get('is_admin')
                 except Exception:
                     error_logger.error('Failed to fetch token for ' + authorization, exc_info=True)
