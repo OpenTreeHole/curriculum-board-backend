@@ -8,6 +8,7 @@ class CourseGroup(Model):
     name = fields.TextField()
     code = fields.TextField()
     department = fields.TextField()
+    campus_name = fields.TextField()
     course_list: ManyToManyRelation["Course"] = fields.ManyToManyField(model_name="models.Course",
                                                                        related_name="course_groups")
 
@@ -19,6 +20,7 @@ class Course(Model):
     code_id = fields.TextField()
     credit = fields.FloatField()
     department = fields.TextField()
+    campus_name = fields.TextField()
     teachers = fields.TextField()
     max_student = fields.IntField()
     week_hour = fields.IntField()
