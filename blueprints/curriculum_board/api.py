@@ -19,11 +19,11 @@ from utils.tortoise_fix import pmc
 NewReviewPyd = pmc(Review, exclude=(
     "id", "reviewer_id", "time_created", "courses", "upvoters", "downvoters", "remark", "history"),
                    exclude_readonly=True)
-GetReviewPyd = pmc(Review, exclude=("courses", "reviewer_id", "upvoters", "downvoters"))
+GetReviewPyd = pmc(Review, exclude=("courses", "upvoters", "downvoters"))
 GetReviewPydWithIsMe = create_model('GetReviewPydWithIsMe', __base__=GetReviewPyd, is_me=(bool, False))
 
 GetMyReviewPyd = pmc(Review, exclude=("courses.course_groups", "reviewer_id", "upvoters", "downvoters"))
-ReviewHistoryPyd = pmc(Review, exclude=("id", "courses", "reviewer_id", "upvoters", "downvoters", "history"))
+ReviewHistoryPyd = pmc(Review, exclude=("id", "courses", "upvoters", "downvoters", "history"))
 NewCoursePyd = pmc(Course, exclude=("id", "review_list", "course_groups"))
 
 # 将 review_list 替换为含有 is_me 字段的
@@ -42,7 +42,6 @@ def insert_extra_fields(request: Request, review_list: List[Review]):
     # 增加 is_me 字段
     for review in review_list:
         review.is_me = (review.reviewer_id == request.ctx.user_id)
-
 
 
 @bp_curriculum_board.get("/courses")

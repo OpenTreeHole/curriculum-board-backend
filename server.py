@@ -48,7 +48,10 @@ async def migrate_database():
         await command.migrate()
     except:
         pass
-    await command.upgrade()
+    try:
+        await command.upgrade()
+    except:
+        pass
 
 
 if __name__ == "__main__":

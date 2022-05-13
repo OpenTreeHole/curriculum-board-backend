@@ -6,7 +6,7 @@ from tortoise import Tortoise
 
 from config import database_config
 
-LESSON_JSON = r"D:\Code\FDUCourseData\data\insert\insert.json"
+LESSON_JSON = r"D:\Code\curriculum-board-backend\scripts\387.json"
 
 
 async def main():
@@ -17,13 +17,16 @@ async def main():
         json_course: dict
         for json_course in json_data:
             from models import Course, CourseGroup
-            group: Optional[CourseGroup] = await CourseGroup.get_or_none(code=json_course['code'])
-            body_dict = {'name': json_course['name'], 'code': json_course['code'], 'code_id': json_course['no'],
+            no: str = json_course['no']
+            group: Optional[CourseGroup] = await CourseGroup.get_or_none(code=no[:-3])
+
+            body_dict = {'name': json_course['name'], 'code': no[:-3], 'code_id': no,
                          'department': json_course['department'], 'teachers': json_course['teachers'],
-                         'max_student': json_course['maxStudent'], 'week_hour': json_course['weekHour'],
-                         'credit': json_course['credits'], 'campus_name': json_course['campusName'],
+                         # 'max_student': json_course['maxStudent'],
+                         'credit': json_course['credits'],
                          'year': 2021,
-                         'semester': 3}
+                         'semester': 3,
+                         'campus_name': '', 'max_student': 0,'week_hour':0}
             if group is None:
                 group = await CourseGroup.create(**body_dict)
 
