@@ -1,18 +1,18 @@
 import datetime
+import hashlib
 from typing import Optional, Any, List
 
 from pydantic import create_model
-from sanic import Request, text
+from sanic import Request, text, json
 from sanic.exceptions import NotFound, Unauthorized, InvalidUsage
 from sanic_ext import validate
 from sanic_ext.extensions.openapi import openapi
 from sanic_ext.extensions.openapi.definitions import RequestBody
-
 from blueprints import bp_curriculum_board
 from blueprints.auth.decorator import authorized
-from config import compress
+from config import compress, global_response_cache
 from models import Review, Course, CourseGroup
-from utils.sanic_helper import jsonify_response, jsonify_list_response, jsonify
+from utils.sanic_helper import jsonify_response, jsonify_list_response, jsonify, jsonify_list, objectify
 from utils.tortoise_fix import pmc
 
 # 删除，保证不会 require "remark" 这个字段
@@ -20,17 +20,17 @@ NewReviewPyd = pmc(Review, exclude=(
     "id", "reviewer_id", "time_created", "courses", "upvoters", "downvoters", "remark", "history"),
                    exclude_readonly=True)
 GetReviewPyd = pmc(Review, exclude=("courses", "upvoters", "downvoters"))
-GetReviewPydWithIsMe = create_model('GetReviewPydWithIsMe', __base__=GetReviewPyd, is_me=(bool, False))
+GetReviewPydWithIsMe = create_model('GetReviewPydWithIsMe', __base__=GetReviewPyd, is_me=(bool, False), vote=(int, 0))
 
 GetMyReviewPyd = pmc(Review, exclude=("courses.course_groups", "reviewer_id", "upvoters", "downvoters"))
 ReviewHistoryPyd = pmc(Review, exclude=("id", "courses", "upvoters", "downvoters", "history"))
 NewCoursePyd = pmc(Course, exclude=("id", "review_list", "course_groups"))
 
-# 将 review_list 替换为含有 is_me 字段的
+# 将 review_list 替换为含有 is_me, vote 字段的
 GetCoursePyd_ = pmc(Course, exclude=("review_list", "course_groups"))
 GetCoursePyd = create_model('GetCoursePyd', __base__=GetCoursePyd_, review_list=(List[GetReviewPydWithIsMe], []))
 
-# 将 course_list.review_list 替换为含有 is_me 字段的
+# 将 course_list.review_list 替换为含有 is_me, vote 字段的
 GetSingleCourseGroupPyd_ = pmc(CourseGroup, exclude=("course_list",))
 GetSingleCourseGroupPyd = create_model('GetSingleCourseGroupPyd', __base__=GetSingleCourseGroupPyd_,
                                        course_list=(List[GetCoursePyd], []))
@@ -39,9 +39,38 @@ GetMultiCourseGroupsPyd = pmc(CourseGroup, exclude=("course_list.review_list", "
 
 
 def insert_extra_fields(request: Request, review_list: List[Review]):
-    # 增加 is_me 字段
+    # 增加 is_me, vote 字段
     for review in review_list:
         review.is_me = (review.reviewer_id == request.ctx.user_id)
+        if request.ctx.user_id in review.upvoters:
+            review.vote = 1
+        elif request.ctx.user_id in review.downvoters:
+            review.vote = -1
+        else:
+            review.vote = 0
+
+
+# 针对 Course Groups 的缓存
+cache_key = "/courses"
+cache_hash_key = "/courses/hash"
+
+
+async def get_course_groups_from_cache() -> str:
+    if not await global_response_cache.exists(cache_key):
+        await update_course_groups_to_cache()
+    return await global_response_cache.get(cache_key)
+
+
+async def get_course_groups_hash_from_cache() -> str:
+    if not await global_response_cache.exists(cache_key):
+        await update_course_groups_to_cache()
+    return await global_response_cache.get(cache_hash_key)
+
+
+async def update_course_groups_to_cache():
+    content = await jsonify_list(GetMultiCourseGroupsPyd, await CourseGroup.all())
+    await global_response_cache.set(cache_key, content)
+    await global_response_cache.set(cache_hash_key, hashlib.sha1(content.encode(encoding='utf-8')).hexdigest())
 
 
 @bp_curriculum_board.get("/courses")
@@ -53,11 +82,23 @@ def insert_extra_fields(request: Request, review_list: List[Review]):
         "application/json": [GetMultiCourseGroupsPyd.construct(course_list=[GetCoursePyd.construct()])],
     }
 )
-@authorized()
 @compress.compress()
 async def get_course_groups(request: Request):
-    course_groups: list[CourseGroup] = await CourseGroup.all()
-    return await jsonify_list_response(GetMultiCourseGroupsPyd, course_groups)
+    return json(await get_course_groups_from_cache(), dumps=lambda x: x)
+
+
+@bp_curriculum_board.get("/courses/hash")
+@openapi.description(
+    "### Get the hash code of all course groups (i.e. courses with the same code).")
+@openapi.response(
+    200,
+    {
+        "application/json": objectify({"hash": str}),
+    }
+)
+@compress.compress()
+async def get_course_groups_hash(request: Request):
+    return json({"hash": await get_course_groups_hash_from_cache()})
 
 
 @bp_curriculum_board.get("/group/<group_id:int>")
@@ -104,6 +145,9 @@ async def add_course(request: Request, body: NewCoursePyd):
 
     course_added = await Course.create(**body_dict)
     await group.course_list.add(course_added)
+
+    # 更新缓存
+    await update_course_groups_to_cache()
 
     return await jsonify_response(GetCoursePyd, course_added)
 
@@ -220,7 +264,7 @@ async def modify_review(request: Request, body: NewReviewPyd, review_id: int):
 @bp_curriculum_board.patch("/reviews/<review_id:int>")
 @openapi.body(
     RequestBody({
-        "application/json": [{'upvote': True}]
+        "application/json": objectify({'upvote': True}),
     })
 )
 @openapi.description("### Up-vote or down-vote a review with given review id. If having voted, it cancels the vote.")
@@ -281,9 +325,7 @@ async def get_reviews(request: Request, course_id: int):
         raise NotFound(f"Course with id {course_id} is not found")
 
     reviews: list[Review] = await this_course.review_list.all()
-    # 增加 is_me 字段
-    for review in reviews:
-        review.is_me = (review.reviewer_id == request.ctx.user_id)
+    insert_extra_fields(request, reviews)
     return await jsonify_list_response(GetReviewPydWithIsMe, reviews)
 
 

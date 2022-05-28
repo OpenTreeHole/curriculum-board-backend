@@ -1,5 +1,5 @@
 from aiocache import Cache
-from aiocache.serializers import JsonSerializer
+from aiocache.serializers import JsonSerializer, StringSerializer
 from sanic import Sanic
 from sanic_ext import Extend
 from sanic_gzip import Compress
@@ -30,3 +30,4 @@ database_config = {
 }
 
 global_json_cache = Cache(serializer=JsonSerializer())
+global_response_cache = Cache(serializer=StringSerializer())
