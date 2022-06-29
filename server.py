@@ -24,11 +24,12 @@ async def close_aiohttp(_, __):
 def main():
     Tortoise.init_models(model_modules, "models")
     app.ext.openapi.add_security_scheme("Token", "apiKey", scheme=SecuritySchemeAuthorization.OAUTH)
-    from blueprints import bp_curriculum_board, bp_auth
+    from blueprints import bp_curriculum_board, bp_auth,bp_static
     app.config.FALLBACK_ERROR_FORMAT = "json"
     app.config.OAS_UI_DEFAULT = "swagger"
     app.blueprint(bp_curriculum_board)
     app.blueprint(bp_auth)
+    app.blueprint(bp_static)
     app.run(
         host="0.0.0.0",
         fast=True,
